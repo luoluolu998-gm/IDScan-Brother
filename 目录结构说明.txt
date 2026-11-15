@@ -1,0 +1,14 @@
+IDScan Brother 3.0 目录结构（固定）
+
+小程序3.0.exe
+naps2.exe                 NAPS2 主界面程序
+config/                   小程序自身设置，自动创建
+app/                      NAPS2 原有运行文件，包含 NAPS2.Console.exe
+data/                     NAPS2 原有数据，包含 profiles.xml
+output/                   临时文件，启动时清理并创建，退出时递归删除
+
+注意：不要把 naps2.exe、app、data 再放进额外的 NAPS2 子文件夹。
+不要手动删除或覆盖 NAPS2 的 app、data。
+
+源码运行：安装 requirements.txt 后运行 python main.py。
+打包：运行 build_exe.bat。
