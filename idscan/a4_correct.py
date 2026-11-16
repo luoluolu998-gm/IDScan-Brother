@@ -1,4 +1,3 @@
-
 """对整张 A4 扫描图做保守的小角度校正，不裁切、不做 90/180 度旋转。"""
 import math
 import cv2
@@ -71,7 +70,7 @@ def correct_a4(image, max_angle=3.0):
 
     # 保持原页面像素尺寸；边缘用白色补齐，不裁切内容。
     corrected = image.rotate(
-        -angle,
+        angle,
         resample=Image.Resampling.BICUBIC,
         expand=False,
         fillcolor="white"

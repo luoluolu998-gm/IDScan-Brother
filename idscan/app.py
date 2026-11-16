@@ -46,6 +46,9 @@ class IDScanApp:
         self.single_raw = None
         self.single_corrected = None
 
+        # 单面预览状态：False=原图，True=校正图
+        self.single_show_corrected = False
+
         self.latest_raw = None
         self.latest_corrected = None
 
@@ -1053,6 +1056,9 @@ class IDScanApp:
         self.single_raw = raw
         self.single_corrected = corrected
 
+        # 扫描完成后，先显示原始图片
+        self.single_show_corrected = False
+
         self.latest_raw = raw
         self.latest_corrected = corrected
 
@@ -1061,7 +1067,7 @@ class IDScanApp:
         self._refresh_previews()
 
         self._set_status(
-            f"单面扫描完成；倾斜校正 {angle:.2f}°"
+            f"单面扫描完成；倾斜校正 {angle:.2f}°，当前显示原图"
         )
 
     def _scan_error(self, error):
@@ -1081,7 +1087,7 @@ class IDScanApp:
 
         if value == "单面校正":
 
-            if self.single_corrected is None:
+            if self.single_raw is None or self.single_corrected is None:
                 messagebox.showinfo(
                     "单面校正",
                     "请先扫描或导入一张单面文件。"
@@ -1090,23 +1096,30 @@ class IDScanApp:
 
             self.current_mode = "single"
 
+            # 每点击一次，在原图和校正图之间切换
+            self.single_show_corrected = not self.single_show_corrected
+
+            self._refresh_previews()
+
+            self._set_status(
+                "当前显示：单面校正效果"
+                if self.single_show_corrected
+                else "当前显示：单面原始图片"
+            )
+
+            return
+
         else:
 
             self.arrangement.set(value)
-
             self.settings["arrangement"] = value
-
             self.current_mode = "duplex"
 
         save_settings(self.settings)
 
         self._refresh_previews()
 
-        self._set_status(
-            "单面校正预览"
-            if self.current_mode == "single"
-            else f"页面排列：{value}"
-        )
+        self._set_status(f"页面排列：{value}")
 
     # ==================================================
     # A4 页面合成
@@ -1151,34 +1164,38 @@ class IDScanApp:
 
         if self.current_mode == "single":
 
-            # 单面模式：
-            # 左上：单面原始图
-            # 左下：空白
-            # 中上：空白
-            # 中下：空白
-            # 右侧：A4 单面校正结果
+            # 单面模式：前四个小框保持空白，右侧大框切换显示原图/校正图。
+            if self.single_show_corrected:
+                display_image = self.single_corrected
+                right_title = "05  单面校正效果"
+                right_empty = "等待校正图片"
+            else:
+                display_image = self.single_raw
+                right_title = "05  单面原始图"
+                right_empty = "等待单面图片"
+
             images = [
-                self.single_raw,
                 None,
                 None,
                 None,
-                self.single_corrected
+                None,
+                display_image
             ]
 
             titles = [
-                "01  单面原始图",
+                "01  正面原始图",
                 "02  反面原始图",
                 "03  正面校正图",
                 "04  反面校正图",
-                "05  A4 页面预览"
+                right_title
             ]
 
             empty_texts = [
-                "等待单面扫描",
                 "单面模式",
                 "单面模式",
                 "单面模式",
-                "等待页面"
+                "单面模式",
+                right_empty
             ]
 
         else:
@@ -1311,6 +1328,9 @@ class IDScanApp:
 
                 self.single_raw = raw
                 self.single_corrected = corrected
+
+                # 每次导入新图片，先显示原始图
+                self.single_show_corrected = False
 
                 self.latest_raw = raw
                 self.latest_corrected = corrected
