@@ -1,3 +1,4 @@
+import io
 from pathlib import Path
 
 from reportlab.pdfgen import canvas
@@ -21,8 +22,20 @@ def save_output(image, path, fmt, dpi=300):
 
         page_w, page_h = A4
 
+                # 将 A4 图片以 JPEG 质量 95 压缩后嵌入 PDF
+        jpeg_buffer = io.BytesIO()
+
+        image.convert("RGB").save(
+            jpeg_buffer,
+            format="JPEG",
+            quality=95,
+            optimize=True
+        )
+
+        jpeg_buffer.seek(0)
+
         pdf.drawImage(
-            ImageReader(image),
+            ImageReader(jpeg_buffer),
             0,
             0,
             width=page_w,

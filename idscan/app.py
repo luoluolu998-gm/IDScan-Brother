@@ -13,9 +13,8 @@ from .settings import (
     NAPS2_CONSOLE, NAPS2_GUI, load_settings, save_settings,
 )
 from .profiles import read_profiles, choose_default
-from .scanner import scan_to_image, launch_naps2
+from .scanner import scan_to_image, launch_naps2, deskew_image
 from .imaging import load_and_trim
-from .a4_correct import correct_a4
 from .layout import compose_a4
 from .exporter import save_output
 from .preview import fit_preview
@@ -401,7 +400,7 @@ class IDScanApp:
         )
 
         self.profile_menu.config(
-            width=16,
+            width=22,
             bg="white",
             fg="#18395e",
             activebackground="#e5efff",
@@ -419,7 +418,6 @@ class IDScanApp:
             padx=(5, 12),
             pady=6
         )
-
         if not self.profiles:
             self.profile_menu.configure(
                 state="disabled"
@@ -540,7 +538,9 @@ class IDScanApp:
             padx=4,
             pady=4
         )
-
+        # 禁止卡片根据内部图片标签的尺寸改变自身请求尺寸
+        card.grid_propagate(False)
+        
         card.grid_columnconfigure(
             0, weight=1
         )
@@ -839,7 +839,7 @@ class IDScanApp:
             parent,
             text=text,
             font=("Microsoft YaHei UI", 9, "bold"),
-            bg=bg,
+                        bg=bg,
             fg=fg,
             activebackground=bg,
             activeforeground=fg,
@@ -990,14 +990,25 @@ class IDScanApp:
 
                 else:
 
-                    corrected, angle = correct_a4(raw)
+                    corrected_path = output.with_name(
+                        output.stem + "_deskewed.jpg"
+                    )
+
+                    deskew_image(
+                        NAPS2_CONSOLE,
+                        output,
+                        corrected_path,
+                        working_dir=ROOT
+                    )
+
+                    with Image.open(corrected_path) as source:
+                        corrected = source.convert("RGB").copy()
 
                     self.root.after(
                         0,
                         lambda: self._single_done(
                             raw,
-                            corrected,
-                            angle
+                            corrected
                         )
                     )
 
@@ -1049,8 +1060,7 @@ class IDScanApp:
     def _single_done(
         self,
         raw,
-        corrected,
-        angle
+        corrected
     ):
 
         self.single_raw = raw
@@ -1067,7 +1077,7 @@ class IDScanApp:
         self._refresh_previews()
 
         self._set_status(
-            f"单面扫描完成；倾斜校正 {angle:.2f}°，当前显示原图"
+            "单面扫描完成；NAPS2 自动纠偏完成，当前显示原图"
         )
 
     def _scan_error(self, error):
@@ -1249,12 +1259,12 @@ class IDScanApp:
         ):
 
             width = max(
-                160,
+                1,
                 label.winfo_width() - 16
             )
 
             height = max(
-                160,
+                1,
                 label.winfo_height() - 16
             )
 
@@ -1284,8 +1294,7 @@ class IDScanApp:
                 image=tk_image,
                 text=""
             )
-
-    # ==================================================
+                # ==================================================
     # 导入图片
     # ==================================================
 
@@ -1321,10 +1330,22 @@ class IDScanApp:
                 raw = source.convert("RGB").copy()
 
             # 单面图片是整张页面，不进行证件边缘裁切。
-            # 直接调用原有 A4 自动校正逻辑。
+            # 使用 NAPS2 的 --deskew 自动纠偏。
             if side == "single":
 
-                corrected, angle = correct_a4(raw)
+                corrected_path = OUTPUT_DIR / (
+                    f"import_{datetime.now():%Y%m%d_%H%M%S_%f}_deskewed.jpg"
+                )
+
+                deskew_image(
+                    NAPS2_CONSOLE,
+                    path,
+                    corrected_path,
+                    working_dir=ROOT
+                )
+
+                with Image.open(corrected_path) as source:
+                    corrected = source.convert("RGB").copy()
 
                 self.single_raw = raw
                 self.single_corrected = corrected
@@ -1340,7 +1361,7 @@ class IDScanApp:
                 self._refresh_previews()
 
                 self._set_status(
-                    f"单张图片导入完成；倾斜校正 {angle:.2f}°"
+                    "单张图片导入完成；NAPS2 自动纠偏完成"
                 )
 
                 return
@@ -1591,9 +1612,13 @@ class IDScanApp:
     def show_about(self):
 
         messagebox.showinfo(
-            "关于 IDScan Brother",
-            "IDScan Brother 3.0\n"
-            "证件扫描、自动校正与 A4 输出工具"
+            "关于 IDScan Brother 3.0",
+            "【阿洛luoluolu 自用私人工具】\n\n"
+            "证件扫描、自动校正与 A4 输出工具\n\n"
+            "python与 ChatGPT 协作开发\n"
+            "从功能规划、界面设计到代码编写与测试\n"
+            "凝聚了人类创意与人工智能协作的成果\n"
+            "© 2026年11月 All Rights Reserved."
         )
 
     # ==================================================
@@ -1637,3 +1662,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    

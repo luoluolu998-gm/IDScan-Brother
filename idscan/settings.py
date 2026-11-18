@@ -16,7 +16,7 @@ OUTPUT_DIR = ROOT / "output"
 PROFILE_FILE = DATA_DIR / "profiles.xml"
 SETTINGS_FILE = CONFIG_DIR / "settings.json"
 NAPS2_CONSOLE = APP_DIR / "NAPS2.Console.exe"
-NAPS2_GUI = ROOT / "naps2.exe"
+NAPS2_GUI = APP_DIR / "naps2.exe"
 DEFAULTS = {
     "profile": "", "threshold": 245, "margin_mm": 8,
     "gap_mm": 8, "arrangement": "左右排列"
